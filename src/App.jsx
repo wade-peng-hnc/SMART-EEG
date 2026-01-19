@@ -27,6 +27,13 @@ const AZURE_EEGDATA_URL =
   import.meta.env.VITE_AZURE_EEGDATA_URL || `${AZURE_BASE_URL}/eegdata/`
 const AZURE_SEASCORE_URL =
   import.meta.env.VITE_AZURE_SEASCORE_URL || `${AZURE_BASE_URL}/seascore/`
+const SMART_CLIENT_ID = import.meta.env.VITE_SMART_CLIENT_ID
+const SMART_REDIRECT_URI =
+  import.meta.env.VITE_SMART_REDIRECT_URI ||
+  `${window.location.origin}${window.location.pathname}`
+const SMART_SCOPE =
+  import.meta.env.VITE_SMART_SCOPE ||
+  'launch openid fhirUser profile patient/*.read'
 
 function App() {
   const [client, setClient] = useState(null)
@@ -69,6 +76,29 @@ function App() {
   useEffect(() => {
     let mounted = true
 
+    const params = new URLSearchParams(window.location.search)
+    const iss = params.get('iss')
+    const launch = params.get('launch')
+
+    if (iss || launch) {
+      if (!SMART_CLIENT_ID) {
+        setAuthError('SMART on FHIR 缺少 Client ID 設定。')
+        return () => {
+          mounted = false
+        }
+      }
+      FHIR.oauth2.authorize({
+        clientId: SMART_CLIENT_ID,
+        scope: SMART_SCOPE,
+        redirectUri: SMART_REDIRECT_URI,
+        iss,
+        pkce: true,
+      })
+      return () => {
+        mounted = false
+      }
+    }
+
     FHIR.oauth2
       .ready()
       .then((c) => {
@@ -87,7 +117,7 @@ function App() {
         if (status === 401 || status === 403) {
           setAuthError('授權已過期或沒有權限，請重新登入。')
         } else {
-          setAuthError('SMART on FHIR 初始化失敗，請稍後再試。')
+          setAuthError('SMART on FHIR 尚未啟動。')
         }
       })
 
