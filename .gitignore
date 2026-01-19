@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Sensitive EEG data files
+*.gz
+*.csv
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
