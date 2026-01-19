@@ -40,6 +40,7 @@ function App() {
   const [ready, setReady] = useState(false)
   const [authError, setAuthError] = useState('')
   const [patientId, setPatientId] = useState('')
+  const [patientInfo, setPatientInfo] = useState(null)
 
   const [file, setFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
@@ -110,6 +111,15 @@ function App() {
       .then((p) => {
         if (!mounted || !p) return
         setPatientId(p.id || '')
+        const name = p.name?.[0]
+        const given = Array.isArray(name?.given) ? name.given.join(' ') : ''
+        const displayName = name?.text || `${given} ${name?.family || ''}`.trim()
+        setPatientInfo({
+          id: p.id || '',
+          name: displayName || '未提供姓名',
+          gender: p.gender || '未提供',
+          birthDate: p.birthDate || '未提供',
+        })
       })
       .catch((err) => {
         if (!mounted) return
@@ -665,9 +675,6 @@ function App() {
             <h1 className="text-2xl font-semibold text-slate-100">
               EEG Analysis Dashboard
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              SMART on FHIR + SEA Index 分析
-            </p>
           </div>
           <button
             type="button"
@@ -680,14 +687,6 @@ function App() {
 
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <div
-            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs ${
-              authError ? 'bg-slate-800 text-slate-400' : 'bg-sky-900/40 text-sky-200'
-            }`}
-          >
-            <ShieldCheck className={`h-4 w-4 ${authError ? 'text-slate-500' : 'text-sky-300'}`} />
-            SMART 安全
-          </div>
           <div className="flex items-center gap-2 rounded-full bg-emerald-900/40 px-3 py-1 text-xs text-emerald-200">
             SEA 已連線
           </div>
@@ -783,7 +782,21 @@ function App() {
           </aside>
 
           <div className="space-y-6 h-full">
-            <div className="h-full rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+              <div className="flex items-center gap-2 text-slate-200">
+                <UserRound className="h-4 w-4 text-sky-400" />
+                <span className="text-sm font-semibold">病患資訊</span>
+              </div>
+              <div className="mt-4 divide-y divide-slate-800 text-sm">
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-slate-400">Patient ID</span>
+                  <span className="font-medium text-slate-100">
+                    {patientInfo?.id || patientId || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-slate-200">
@@ -791,9 +804,6 @@ function App() {
                     <span className="text-sm font-semibold">檔案資訊</span>
                   </div>
                 </div>
-                <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300">
-                  FHIR R4
-                </span>
               </div>
 
               <div className="mt-4 divide-y divide-slate-800 text-sm">
@@ -851,7 +861,7 @@ function App() {
           </div>
         </section>
 
-        <div className="mt-4 pb-4 space-y-4">
+        <div className="mt-6 pb-6 space-y-4">
           {renderStatusCard()}
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
             <div className="flex items-center justify-between">
