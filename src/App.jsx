@@ -365,10 +365,15 @@ function App() {
       throw new Error('FHIR 用戶端尚未就緒')
     }
 
-    const performerRef =
+    const rawUserRef =
       (typeof client.getUserId === 'function' && client.getUserId()) ||
       client.user?.id ||
-      `Patient/${patientId}`
+      ''
+    const performerRef = rawUserRef.includes('/')
+      ? rawUserRef
+      : client.user?.resourceType && rawUserRef
+        ? `${client.user.resourceType}/${rawUserRef}`
+        : `Patient/${patientId}`
 
     const observation = {
       resourceType: 'Observation',
