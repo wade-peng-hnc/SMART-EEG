@@ -34,6 +34,16 @@ const SMART_REDIRECT_URI =
 const SMART_SCOPE =
   import.meta.env.VITE_SMART_SCOPE ||
   'launch openid fhirUser profile patient/*.read'
+const TWCORE_OBS_PROFILE =
+  import.meta.env.VITE_TWCORE_OBS_PROFILE ||
+  'https://twcore.mohw.gov.tw/ig/twcore/StructureDefinition/Observation-twcore'
+const SEA_LOINC_PRIMARY_CODE =
+  import.meta.env.VITE_SEA_LOINC_PRIMARY_CODE || '86585-7'
+const SEA_LOINC_SECONDARY_CODE =
+  import.meta.env.VITE_SEA_LOINC_SECONDARY_CODE || '96763-8'
+const SEA_LOINC_DISPLAY =
+  import.meta.env.VITE_SEA_LOINC_DISPLAY ||
+  '憂可視腦波壓力評估指標 (SEA Index)'
 
 function App() {
   const [client, setClient] = useState(null)
@@ -65,6 +75,7 @@ function App() {
   const [azureLoginLoading, setAzureLoginLoading] = useState(false)
   const [seaScoreElapsed, setSeaScoreElapsed] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
+  const [lastObservation, setLastObservation] = useState(null)
 
   useEffect(() => {
     if (!analyzing) return undefined
@@ -352,13 +363,26 @@ function App() {
 
     const observation = {
       resourceType: 'Observation',
+      meta: {
+        profile: [TWCORE_OBS_PROFILE],
+      },
       status: 'final',
       code: {
         coding: [
           {
+            system: 'http://loinc.org',
+            code: SEA_LOINC_PRIMARY_CODE,
+            display: SEA_LOINC_DISPLAY,
+          },
+          {
+            system: 'http://loinc.org',
+            code: SEA_LOINC_SECONDARY_CODE,
+            display: SEA_LOINC_DISPLAY,
+          },
+          {
             system: 'http://clinical-indices.org',
             code: 'SEA-INDEX',
-            display: 'Subclinical Epileptiform Activity Index',
+            display: SEA_LOINC_DISPLAY,
           },
         ],
       },
@@ -367,8 +391,22 @@ function App() {
       valueQuantity: { value, unit: 'index' },
     }
 
+    setLastObservation(observation)
     await client.create(observation)
   }
+
+  const handleDownloadObservation = useCallback(() => {
+    if (!lastObservation) return
+    const blob = new Blob([JSON.stringify(lastObservation, null, 2)], {
+      type: 'application/fhir+json',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'sea-index-observation.json'
+    link.click()
+    URL.revokeObjectURL(url)
+  }, [lastObservation])
 
   const handleUpload = useCallback(async () => {
     if (!file) {
@@ -869,16 +907,26 @@ function App() {
                 <Radar className="h-4 w-4 text-sky-400" />
                 <span className="text-sm font-semibold">SEA Index</span>
               </div>
-              <div
-                className={`text-lg font-semibold ${
-                  Number.isFinite(seaIndex) && seaIndex >= 9
-                    ? 'text-red-500'
-                    : Number.isFinite(seaIndex) && seaIndex >= 5
-                      ? 'text-yellow-500'
-                      : 'text-emerald-600'
-                }`}
-              >
-                {seaIndex !== null && Number.isFinite(seaIndex) ? Math.round(seaIndex) : '-'}
+              <div className="flex items-center gap-3">
+                <div
+                  className={`text-lg font-semibold ${
+                    Number.isFinite(seaIndex) && seaIndex >= 9
+                      ? 'text-red-500'
+                      : Number.isFinite(seaIndex) && seaIndex >= 5
+                        ? 'text-yellow-500'
+                        : 'text-emerald-600'
+                  }`}
+                >
+                  {seaIndex !== null && Number.isFinite(seaIndex) ? Math.round(seaIndex) : '-'}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadObservation}
+                  disabled={!lastObservation}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
+                >
+                  下載 Observation
+                </button>
               </div>
             </div>
             <div className="mt-4">
