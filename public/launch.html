@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SMART Launch</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
     <style>
       :root {
         color-scheme: dark;
@@ -50,8 +51,15 @@
       if (!iss && !launch) {
         console.warn('Missing SMART launch parameters: iss/launch')
       }
-      const target = `./${window.location.search || ''}${window.location.hash || ''}`
-      window.location.replace(target)
+
+      FHIR.oauth2.authorize({
+        clientId: 'YOUR_CLIENT_ID',
+        scope: 'launch openid fhirUser profile patient/*.read',
+        redirectUri: './',
+        iss,
+        launch,
+        pkce: true,
+      })
     </script>
   </body>
 </html>
