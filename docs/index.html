@@ -11,7 +11,7 @@
         const hasSmartParams = params.has('iss') || params.has('launch')
         if (hasSmartParams) return
         if (window.location.pathname.endsWith('/launch.htm')) return
-        const target = './launch.htm'
+        const target = './launch.html'
         window.location.replace(target)
       })()
     </script>
