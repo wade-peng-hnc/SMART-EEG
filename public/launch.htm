@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Launch.html</title>
+    <title>SMART Launch</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
     <style>
       :root {
         color-scheme: dark;
@@ -13,122 +14,53 @@
         margin: 0;
         background: #0b0f1a;
         color: #e5e7eb;
-      }
-      .banner {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 20px 48px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        background: #0f1422;
+        justify-content: center;
+        min-height: 100vh;
       }
-      .banner-title {
-        font-size: 20px;
-        font-weight: 700;
-      }
-      .banner-sub {
-        font-size: 12px;
-        color: #94a3b8;
-        margin-top: 4px;
-      }
-      .tags {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .tag {
-        font-size: 11px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        color: #cbd5f5;
-      }
-      .page-title {
-        text-align: center;
-        font-size: 44px;
-        font-weight: 800;
-        margin: 40px 0 24px;
-        color: #f8fafc;
-      }
-      .code-wrap {
-        max-width: 980px;
-        margin: 0 auto 60px;
-        padding: 0 24px;
-      }
-      .code-card {
-        background: #0b0b0b;
+      .card {
+        padding: 24px 32px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
-        padding: 24px;
+        background: #0f1422;
+        text-align: center;
+        max-width: 420px;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
       }
-      pre {
-        margin: 0;
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.6;
-        color: #e2e8f0;
+      .title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
       }
-      .comment {
-        color: #7dd3fc;
-      }
-      .keyword {
-        color: #fbbf24;
-      }
-      .string {
-        color: #86efac;
+      .desc {
+        font-size: 12px;
+        color: #94a3b8;
       }
     </style>
   </head>
   <body>
-    <div class="banner">
-      <div>
-        <div class="banner-title">臺灣50優良SMART on FHIR</div>
-        <div class="banner-sub">應用程式徵案</div>
-      </div>
-      <div class="tags">
-        <span class="tag">SMART App</span>
-        <span class="tag">Submission Briefing</span>
-        <span class="tag">Workshop</span>
-      </div>
+    <div class="card">
+      <div class="title">SMART 啟動中...</div>
+      <div class="desc">正在導向授權登入頁面</div>
     </div>
-
-    <div class="page-title">Launch.html</div>
-
-    <div class="code-wrap">
-      <div class="code-card">
-        <pre><code>&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-  &lt;head&gt;
-    &lt;meta charset="UTF-8" /&gt;
-    &lt;title&gt;Launch My APP&lt;/title&gt;
-    &lt;script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"&gt;&lt;/script&gt;
-  &lt;/head&gt;
-  &lt;body&gt;
-    &lt;script&gt;
-      FHIR.oauth2.authorize({
-        <span class="comment">// The client_id that you should have obtained after registering a client at the EHR.</span>
-        clientId: <span class="string">"my_web_app"</span>,
-
-        <span class="comment">// The scopes that you request from the EHR.</span>
-        scope: <span class="string">"launch openid fhirUser patient/*.read"</span>,
-
-        <span class="comment">// redirectUri points to your app entry.</span>
-        redirectUri: <span class="string">"index.html"</span>
-      });
-    &lt;/script&gt;
-  &lt;/body&gt;
-&lt;/html&gt;</code></pre>
-      </div>
-    </div>
-
     <script>
       const params = new URLSearchParams(window.location.search)
-      if (params.has('iss') || params.has('launch')) {
-        const target = `./${window.location.search || ''}${window.location.hash || ''}`
-        window.location.replace(target)
+      const iss = params.get('iss')
+      const launch = params.get('launch')
+
+      if (!iss && !launch) {
+        console.warn('Missing SMART launch parameters: iss/launch')
       }
+
+      FHIR.oauth2.authorize({
+        clientId: 'YOUR_CLIENT_ID',
+        scope: 'launch openid fhirUser profile patient/*.read',
+        redirectUri: './',
+        iss,
+        launch,
+        pkce: true,
+      })
     </script>
   </body>
 </html>
