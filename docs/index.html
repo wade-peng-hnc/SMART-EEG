@@ -9,8 +9,9 @@
       (function () {
         const params = new URLSearchParams(window.location.search)
         const hasSmartParams = params.has('iss') || params.has('launch')
-        if (hasSmartParams) return
-        if (window.location.pathname.endsWith('/launch.htm')) return
+        const hasAuthParams = params.has('code') || params.has('state')
+        if (hasSmartParams || hasAuthParams) return
+        if (window.location.pathname.endsWith('/launch.html')) return
         const target = './launch.html'
         window.location.replace(target)
       })()

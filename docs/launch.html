@@ -52,10 +52,12 @@
         console.warn('Missing SMART launch parameters: iss/launch')
       }
 
+      const redirectUri = new URL('./', window.location.href).toString()
+
       FHIR.oauth2.authorize({
         clientId: 'smart-eeg-app',
         scope: 'launch openid fhirUser profile patient/*.read',
-        redirectUri: './',
+        redirectUri,
         iss,
         launch,
         pkce: true,
