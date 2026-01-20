@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/SMART-EEG/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>smart-eeg-app</title>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search)
+        const hasSmartParams = params.has('iss') || params.has('launch')
+        if (hasSmartParams) return
+        if (window.location.pathname.endsWith('/launch.htm')) return
+        const target = './launch.htm'
+        window.location.replace(target)
+      })()
+    </script>
     <script type="module" crossorigin src="/SMART-EEG/assets/index-Dd27qNjw.js"></script>
     <link rel="stylesheet" crossorigin href="/SMART-EEG/assets/index-DN1hBq8M.css">
   </head>

@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>smart-eeg-app</title>
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search)
+        const hasSmartParams = params.has('iss') || params.has('launch')
+        if (hasSmartParams) return
+        if (window.location.pathname.endsWith('/launch.htm')) return
+        const target = './launch.htm'
+        window.location.replace(target)
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

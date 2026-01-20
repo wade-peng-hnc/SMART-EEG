@@ -2,17 +2,133 @@
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      http-equiv="refresh"
-      content="0; url=./"
-    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SMART Launch</title>
+    <title>Launch.html</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", "Noto Sans TC", system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0b0f1a;
+        color: #e5e7eb;
+      }
+      .banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 48px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: #0f1422;
+      }
+      .banner-title {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      .banner-sub {
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 4px;
+      }
+      .tags {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        color: #cbd5f5;
+      }
+      .page-title {
+        text-align: center;
+        font-size: 44px;
+        font-weight: 800;
+        margin: 40px 0 24px;
+        color: #f8fafc;
+      }
+      .code-wrap {
+        max-width: 980px;
+        margin: 0 auto 60px;
+        padding: 0 24px;
+      }
+      .code-card {
+        background: #0b0b0b;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+      .comment {
+        color: #7dd3fc;
+      }
+      .keyword {
+        color: #fbbf24;
+      }
+      .string {
+        color: #86efac;
+      }
+    </style>
   </head>
   <body>
+    <div class="banner">
+      <div>
+        <div class="banner-title">臺灣50優良SMART on FHIR</div>
+        <div class="banner-sub">應用程式徵案</div>
+      </div>
+      <div class="tags">
+        <span class="tag">SMART App</span>
+        <span class="tag">Submission Briefing</span>
+        <span class="tag">Workshop</span>
+      </div>
+    </div>
+
+    <div class="page-title">Launch.html</div>
+
+    <div class="code-wrap">
+      <div class="code-card">
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;title&gt;Launch My APP&lt;/title&gt;
+    &lt;script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;script&gt;
+      FHIR.oauth2.authorize({
+        <span class="comment">// The client_id that you should have obtained after registering a client at the EHR.</span>
+        clientId: <span class="string">"my_web_app"</span>,
+
+        <span class="comment">// The scopes that you request from the EHR.</span>
+        scope: <span class="string">"launch openid fhirUser patient/*.read"</span>,
+
+        <span class="comment">// redirectUri points to your app entry.</span>
+        redirectUri: <span class="string">"index.html"</span>
+      });
+    &lt;/script&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+    </div>
+
     <script>
-      const target = `./${window.location.search || ''}${window.location.hash || ''}`
-      window.location.replace(target)
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('iss') || params.has('launch')) {
+        const target = `./${window.location.search || ''}${window.location.hash || ''}`
+        window.location.replace(target)
+      }
     </script>
   </body>
 </html>
