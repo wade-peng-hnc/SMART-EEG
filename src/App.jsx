@@ -47,8 +47,7 @@ const SEA_LOINC_PRIMARY_DISPLAY =
 const SEA_LOINC_SECONDARY_DISPLAY =
   import.meta.env.VITE_SEA_LOINC_SECONDARY_DISPLAY ||
   'SARS-CoV-2 (COVID-19) E gene [Presence] in Respiratory system specimen by NAA with probe detection'
-const SEA_CODE_TEXT =
-  import.meta.env.VITE_SEA_CODE_TEXT || '憂可視腦波壓力評估指標 (SEA Index)'
+const SEA_CODE_TEXT = import.meta.env.VITE_SEA_CODE_TEXT || 'SEA Index'
 
 function App() {
   const [client, setClient] = useState(null)
@@ -701,7 +700,14 @@ function App() {
 
                 <div className="mt-auto flex items-center justify-between pt-6 text-[11px] text-slate-400">
                   <span>SMART on FHIR Ready</span>
-                  <span>Privacy · Legal</span>
+                  <a
+                    href={`${import.meta.env.BASE_URL}privacy.html`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="transition hover:text-slate-200"
+                  >
+                    隱私權政策 · 法律聲明
+                  </a>
                 </div>
               </div>
             </div>
