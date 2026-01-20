@@ -423,16 +423,35 @@ function App() {
       },
     }
 
+    const serverUrl = client.state?.serverUrl
+    const accessToken = client.state?.tokenResponse?.access_token
+    if (!serverUrl || !accessToken) {
+      throw new Error('FHIR 授權資訊缺失')
+    }
+
     setLastObservation(observation)
-    await client.request({
-      url: 'Observation',
+    const res = await fetch(`${serverUrl}/Observation`, {
       method: 'POST',
-      body: observation,
       headers: {
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/fhir+json',
         Accept: 'application/fhir+json',
       },
+      body: JSON.stringify(observation),
     })
+
+    if (!res.ok) {
+      let outcome = null
+      try {
+        outcome = await res.json()
+      } catch {
+        outcome = null
+      }
+      const error = new Error('FHIR write failed')
+      error.status = res.status
+      error.response = outcome
+      throw error
+    }
   }
 
   const handleDownloadObservation = useCallback(() => {
