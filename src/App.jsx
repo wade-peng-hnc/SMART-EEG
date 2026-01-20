@@ -41,9 +41,14 @@ const SEA_LOINC_PRIMARY_CODE =
   import.meta.env.VITE_SEA_LOINC_PRIMARY_CODE || '86585-7'
 const SEA_LOINC_SECONDARY_CODE =
   import.meta.env.VITE_SEA_LOINC_SECONDARY_CODE || '96763-8'
-const SEA_LOINC_DISPLAY =
-  import.meta.env.VITE_SEA_LOINC_DISPLAY ||
-  '憂可視腦波壓力評估指標 (SEA Index)'
+const SEA_LOINC_PRIMARY_DISPLAY =
+  import.meta.env.VITE_SEA_LOINC_PRIMARY_DISPLAY ||
+  'MDS v3.0 - RAI v1.17.2, OASIS E - Signs and symptoms of delirium (from CAM) during assessment period [CMS Assessment]'
+const SEA_LOINC_SECONDARY_DISPLAY =
+  import.meta.env.VITE_SEA_LOINC_SECONDARY_DISPLAY ||
+  'SARS-CoV-2 (COVID-19) E gene [Presence] in Respiratory system specimen by NAA with probe detection'
+const SEA_CODE_TEXT =
+  import.meta.env.VITE_SEA_CODE_TEXT || '憂可視腦波壓力評估指標 (SEA Index)'
 
 function App() {
   const [client, setClient] = useState(null)
@@ -372,19 +377,20 @@ function App() {
           {
             system: 'http://loinc.org',
             code: SEA_LOINC_PRIMARY_CODE,
-            display: SEA_LOINC_DISPLAY,
+            display: SEA_LOINC_PRIMARY_DISPLAY,
           },
           {
             system: 'http://loinc.org',
             code: SEA_LOINC_SECONDARY_CODE,
-            display: SEA_LOINC_DISPLAY,
+            display: SEA_LOINC_SECONDARY_DISPLAY,
           },
           {
             system: 'http://clinical-indices.org',
             code: 'SEA-INDEX',
-            display: SEA_LOINC_DISPLAY,
+            display: SEA_CODE_TEXT,
           },
         ],
+        text: SEA_CODE_TEXT,
       },
       subject: { reference: `Patient/${patientId}` },
       effectiveDateTime: new Date().toISOString(),
