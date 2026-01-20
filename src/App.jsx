@@ -415,7 +415,12 @@ function App() {
       subject: { reference: `Patient/${patientId}` },
       performer: [{ reference: performerRef }],
       effectiveDateTime: new Date().toISOString(),
-      valueQuantity: { value, unit: 'index' },
+      valueQuantity: {
+        value,
+        unit: 'index',
+        system: 'http://unitsofmeasure.org',
+        code: '1',
+      },
     }
 
     setLastObservation(observation)
