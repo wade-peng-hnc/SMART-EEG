@@ -376,6 +376,18 @@ function App() {
         profile: [TWCORE_OBS_PROFILE],
       },
       status: 'final',
+      category: [
+        {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              code: 'survey',
+              display: 'Survey',
+            },
+          ],
+          text: 'Survey',
+        },
+      ],
       text: {
         status: 'generated',
         div: `<div xmlns="http://www.w3.org/1999/xhtml">SEA Index: ${value}</div>`,
