@@ -36,7 +36,7 @@ const SMART_SCOPE =
   'launch openid fhirUser profile patient/*.read'
 const TWCORE_OBS_PROFILE =
   import.meta.env.VITE_TWCORE_OBS_PROFILE ||
-  'https://twcore.mohw.gov.tw/ig/twcore/StructureDefinition/Observation-twcore'
+  'https://twcore.mohw.gov.tw/ig/twcore/StructureDefinition/Observation-simple-twcore'
 const SEA_LOINC_PRIMARY_CODE =
   import.meta.env.VITE_SEA_LOINC_PRIMARY_CODE || '86585-7'
 const SEA_LOINC_SECONDARY_CODE =
@@ -365,12 +365,21 @@ function App() {
       throw new Error('FHIR 用戶端尚未就緒')
     }
 
+    const performerRef =
+      (typeof client.getUserId === 'function' && client.getUserId()) ||
+      client.user?.id ||
+      `Patient/${patientId}`
+
     const observation = {
       resourceType: 'Observation',
       meta: {
         profile: [TWCORE_OBS_PROFILE],
       },
       status: 'final',
+      text: {
+        status: 'generated',
+        div: `<div xmlns="http://www.w3.org/1999/xhtml">SEA Index: ${value}</div>`,
+      },
       code: {
         coding: [
           {
@@ -392,6 +401,7 @@ function App() {
         text: SEA_CODE_TEXT,
       },
       subject: { reference: `Patient/${patientId}` },
+      performer: [{ reference: performerRef }],
       effectiveDateTime: new Date().toISOString(),
       valueQuantity: { value, unit: 'index' },
     }
