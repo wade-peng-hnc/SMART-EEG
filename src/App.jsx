@@ -424,7 +424,15 @@ function App() {
     }
 
     setLastObservation(observation)
-    await client.create(observation)
+    await client.request({
+      url: 'Observation',
+      method: 'POST',
+      body: observation,
+      headers: {
+        'Content-Type': 'application/fhir+json',
+        Accept: 'application/fhir+json',
+      },
+    })
   }
 
   const handleDownloadObservation = useCallback(() => {
