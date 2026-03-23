@@ -27,8 +27,6 @@ const AZURE_EEGDATA_URL =
   import.meta.env.VITE_AZURE_EEGDATA_URL || `${AZURE_BASE_URL}/eegdata/`
 const AZURE_SEASCORE_URL =
   import.meta.env.VITE_AZURE_SEASCORE_URL || `${AZURE_BASE_URL}/seascore/`
-const SMART_PROXY_BASE_URL = import.meta.env.VITE_SMART_PROXY_BASE_URL || ''
-const SMART_PROXY_ENABLED = import.meta.env.VITE_SMART_PROXY_ENABLED === 'true'
 
 function App() {
   const [client, setClient] = useState(null)
@@ -60,13 +58,6 @@ function App() {
   const [seaScoreElapsed, setSeaScoreElapsed] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
 
-  const initializeSmartClient = useCallback(async (smartClient) => {
-    setClient(smartClient)
-    setReady(true)
-    const p = await smartClient.patient.read()
-    setPatientId(p?.id || '')
-  }, [])
-
   useEffect(() => {
     if (!analyzing) return undefined
     const timer = setInterval(() => {
@@ -78,54 +69,19 @@ function App() {
   useEffect(() => {
     let mounted = true
 
-    const bootstrapSmart = async () => {
-      try {
-        const params = new URLSearchParams(window.location.search)
-        const smartSessionId = params.get('smartSession')
-        const iss = params.get('iss')
-        const launch = params.get('launch')
-
-        if (SMART_PROXY_ENABLED && smartSessionId) {
-          if (!SMART_PROXY_BASE_URL) {
-            throw new Error('缺少 VITE_SMART_PROXY_BASE_URL 設定')
-          }
-
-          const sessionRes = await fetch(
-            `${SMART_PROXY_BASE_URL}/smart/session/${encodeURIComponent(smartSessionId)}`,
-            { credentials: 'include' }
-          )
-          if (!sessionRes.ok) {
-            throw new Error('無法取得 SMART 代理 session')
-          }
-          const sessionData = await sessionRes.json()
-          const proxiedClient = FHIR.client({
-            serverUrl: sessionData.serverUrl,
-            tokenResponse: sessionData.tokenResponse,
-          })
-          if (!mounted) return
-          await initializeSmartClient(proxiedClient)
-
-          params.delete('smartSession')
-          const newSearch = params.toString()
-          const cleanUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`
-          window.history.replaceState({}, '', cleanUrl)
-          return
-        }
-
-        if (SMART_PROXY_ENABLED && (iss || launch)) {
-          if (!SMART_PROXY_BASE_URL) {
-            throw new Error('缺少 VITE_SMART_PROXY_BASE_URL 設定')
-          }
-          const proxyLaunchUrl = new URL(`${SMART_PROXY_BASE_URL}/smart/launch`)
-          proxyLaunchUrl.search = params.toString()
-          window.location.replace(proxyLaunchUrl.toString())
-          return
-        }
-
-        const c = await FHIR.oauth2.ready()
+    FHIR.oauth2
+      .ready()
+      .then((c) => {
         if (!mounted) return
-        await initializeSmartClient(c)
-      } catch (err) {
+        setClient(c)
+        setReady(true)
+        return c.patient.read()
+      })
+      .then((p) => {
+        if (!mounted || !p) return
+        setPatientId(p.id || '')
+      })
+      .catch((err) => {
         if (!mounted) return
         const status = err?.status || err?.response?.status
         if (status === 401 || status === 403) {
@@ -133,14 +89,12 @@ function App() {
         } else {
           setAuthError('SMART on FHIR 初始化失敗，請稍後再試。')
         }
-      }
-    }
+      })
 
-    bootstrapSmart()
     return () => {
       mounted = false
     }
-  }, [initializeSmartClient])
+  }, [])
 
   const signalQualityDisplay = useMemo(() => {
     const raw = csvMetadata?.signal_quality_score
