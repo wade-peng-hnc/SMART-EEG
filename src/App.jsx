@@ -44,6 +44,7 @@ function App() {
   const [seaIndex, setSeaIndex] = useState(null)
   const [fhirWriteStatus, setFhirWriteStatus] = useState('')
   const [fhirWriteErrorCode, setFhirWriteErrorCode] = useState(null)
+  const [fhirObservationId, setFhirObservationId] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [metadataStatus, setMetadataStatus] = useState('')
   const [csvMetadata, setCsvMetadata] = useState(null)
@@ -110,6 +111,7 @@ function App() {
     setSeaIndex(null)
     setFhirWriteStatus('')
     setFhirWriteErrorCode(null)
+    setFhirObservationId('')
     setErrorMessage('')
     setMetadataStatus('')
     setCsvMetadata(null)
@@ -327,7 +329,8 @@ function App() {
       valueQuantity: { value, unit: 'index' },
     }
 
-    await client.create(observation)
+    const created = await client.create(observation)
+    return created?.id || ''
   }
 
   const handleUpload = useCallback(async () => {
@@ -414,7 +417,8 @@ function App() {
 
       try {
         if (typeof finalSeaIndex === 'number' && canWriteFhir) {
-          await writeSeaIndexObservation(finalSeaIndex)
+          const observationId = await writeSeaIndexObservation(finalSeaIndex)
+          setFhirObservationId(observationId || '')
           setFhirWriteStatus('已成功寫入 FHIR Observation')
         } else if (typeof finalSeaIndex !== 'number') {
           setFhirWriteStatus('未取得 SEA Index，略過 FHIR 寫入')
@@ -517,6 +521,11 @@ function App() {
             <span className="ml-2 text-xs text-slate-500">
               (HTTP {fhirWriteErrorCode})
             </span>
+          )}
+          {fhirObservationId && (
+            <div className="mt-1 text-xs text-slate-600">
+              Observation ID: {fhirObservationId}
+            </div>
           )}
         </div>
       )}
