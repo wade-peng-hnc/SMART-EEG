@@ -33,7 +33,7 @@ const SMART_REDIRECT_URI =
   `${window.location.origin}${window.location.pathname}`
 const SMART_SCOPE =
   import.meta.env.VITE_SMART_SCOPE ||
-  'launch openid fhirUser profile patient/*.read'
+  'launch openid fhirUser profile patient/*.read patient/Observation.write'
 const TWCORE_OBS_PROFILE =
   import.meta.env.VITE_TWCORE_OBS_PROFILE ||
   'https://twcore.mohw.gov.tw/ig/twcore/StructureDefinition/Observation-simple-twcore'
