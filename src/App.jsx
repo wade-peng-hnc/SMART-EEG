@@ -27,34 +27,14 @@ const AZURE_EEGDATA_URL =
   import.meta.env.VITE_AZURE_EEGDATA_URL || `${AZURE_BASE_URL}/eegdata/`
 const AZURE_SEASCORE_URL =
   import.meta.env.VITE_AZURE_SEASCORE_URL || `${AZURE_BASE_URL}/seascore/`
-const SMART_CLIENT_ID = import.meta.env.VITE_SMART_CLIENT_ID
-const SMART_REDIRECT_URI =
-  import.meta.env.VITE_SMART_REDIRECT_URI ||
-  `${window.location.origin}${window.location.pathname}`
-const SMART_SCOPE =
-  import.meta.env.VITE_SMART_SCOPE ||
-  'launch openid fhirUser profile patient/*.read patient/Observation.write'
-const TWCORE_OBS_PROFILE =
-  import.meta.env.VITE_TWCORE_OBS_PROFILE ||
-  'https://twcore.mohw.gov.tw/ig/twcore/StructureDefinition/Observation-simple-twcore'
-const SEA_LOINC_PRIMARY_CODE =
-  import.meta.env.VITE_SEA_LOINC_PRIMARY_CODE || '86585-7'
-const SEA_LOINC_SECONDARY_CODE =
-  import.meta.env.VITE_SEA_LOINC_SECONDARY_CODE || '96763-8'
-const SEA_LOINC_PRIMARY_DISPLAY =
-  import.meta.env.VITE_SEA_LOINC_PRIMARY_DISPLAY ||
-  'MDS v3.0 - RAI v1.17.2, OASIS E - Signs and symptoms of delirium (from CAM) during assessment period [CMS Assessment]'
-const SEA_LOINC_SECONDARY_DISPLAY =
-  import.meta.env.VITE_SEA_LOINC_SECONDARY_DISPLAY ||
-  'SARS-CoV-2 (COVID-19) E gene [Presence] in Respiratory system specimen by NAA with probe detection'
-const SEA_CODE_TEXT = import.meta.env.VITE_SEA_CODE_TEXT || 'SEA Index'
+const SMART_PROXY_BASE_URL = import.meta.env.VITE_SMART_PROXY_BASE_URL || ''
+const SMART_PROXY_ENABLED = import.meta.env.VITE_SMART_PROXY_ENABLED === 'true'
 
 function App() {
   const [client, setClient] = useState(null)
   const [ready, setReady] = useState(false)
   const [authError, setAuthError] = useState('')
   const [patientId, setPatientId] = useState('')
-  const [patientInfo, setPatientInfo] = useState(null)
 
   const [file, setFile] = useState(null)
   const [dragActive, setDragActive] = useState(false)
@@ -79,7 +59,13 @@ function App() {
   const [azureLoginLoading, setAzureLoginLoading] = useState(false)
   const [seaScoreElapsed, setSeaScoreElapsed] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
-  const [lastObservation, setLastObservation] = useState(null)
+
+  const initializeSmartClient = useCallback(async (smartClient) => {
+    setClient(smartClient)
+    setReady(true)
+    const p = await smartClient.patient.read()
+    setPatientId(p?.id || '')
+  }, [])
 
   useEffect(() => {
     if (!analyzing) return undefined
@@ -92,64 +78,69 @@ function App() {
   useEffect(() => {
     let mounted = true
 
-    const params = new URLSearchParams(window.location.search)
-    const iss = params.get('iss')
-    const launch = params.get('launch')
+    const bootstrapSmart = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const smartSessionId = params.get('smartSession')
+        const iss = params.get('iss')
+        const launch = params.get('launch')
 
-    if (iss || launch) {
-      if (!SMART_CLIENT_ID) {
-        setAuthError('SMART on FHIR 缺少 Client ID 設定。')
-        return () => {
-          mounted = false
+        if (SMART_PROXY_ENABLED && smartSessionId) {
+          if (!SMART_PROXY_BASE_URL) {
+            throw new Error('缺少 VITE_SMART_PROXY_BASE_URL 設定')
+          }
+
+          const sessionRes = await fetch(
+            `${SMART_PROXY_BASE_URL}/smart/session/${encodeURIComponent(smartSessionId)}`,
+            { credentials: 'include' }
+          )
+          if (!sessionRes.ok) {
+            throw new Error('無法取得 SMART 代理 session')
+          }
+          const sessionData = await sessionRes.json()
+          const proxiedClient = FHIR.client({
+            serverUrl: sessionData.serverUrl,
+            tokenResponse: sessionData.tokenResponse,
+          })
+          if (!mounted) return
+          await initializeSmartClient(proxiedClient)
+
+          params.delete('smartSession')
+          const newSearch = params.toString()
+          const cleanUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ''}${window.location.hash}`
+          window.history.replaceState({}, '', cleanUrl)
+          return
         }
-      }
-      FHIR.oauth2.authorize({
-        clientId: SMART_CLIENT_ID,
-        scope: SMART_SCOPE,
-        redirectUri: SMART_REDIRECT_URI,
-        iss,
-        pkce: true,
-      })
-      return () => {
-        mounted = false
-      }
-    }
 
-    FHIR.oauth2
-      .ready()
-      .then((c) => {
+        if (SMART_PROXY_ENABLED && (iss || launch)) {
+          if (!SMART_PROXY_BASE_URL) {
+            throw new Error('缺少 VITE_SMART_PROXY_BASE_URL 設定')
+          }
+          const proxyLaunchUrl = new URL(`${SMART_PROXY_BASE_URL}/smart/launch`)
+          proxyLaunchUrl.search = params.toString()
+          window.location.replace(proxyLaunchUrl.toString())
+          return
+        }
+
+        const c = await FHIR.oauth2.ready()
         if (!mounted) return
-        setClient(c)
-        setReady(true)
-        return c.patient.read()
-      })
-      .then((p) => {
-        if (!mounted || !p) return
-        setPatientId(p.id || '')
-        const name = p.name?.[0]
-        const given = Array.isArray(name?.given) ? name.given.join(' ') : ''
-        const displayName = name?.text || `${given} ${name?.family || ''}`.trim()
-        setPatientInfo({
-          id: p.id || '',
-          name: displayName || '未提供姓名',
-          gender: p.gender || '未提供',
-          birthDate: p.birthDate || '未提供',
-        })
-      })
-      .catch((err) => {
+        await initializeSmartClient(c)
+      } catch (err) {
         if (!mounted) return
         const status = err?.status || err?.response?.status
         if (status === 401 || status === 403) {
           setAuthError('授權已過期或沒有權限，請重新登入。')
         } else {
-          setAuthError('SMART on FHIR 尚未啟動。')
+          setAuthError('SMART on FHIR 初始化失敗，請稍後再試。')
         }
-      })
+      }
+    }
 
+    bootstrapSmart()
     return () => {
       mounted = false
     }
-  }, [])
+  }, [initializeSmartClient])
 
   const signalQualityDisplay = useMemo(() => {
     const raw = csvMetadata?.signal_quality_score
@@ -365,112 +356,25 @@ function App() {
       throw new Error('FHIR 用戶端尚未就緒')
     }
 
-    const rawUserRef =
-      (typeof client.getUserId === 'function' && client.getUserId()) ||
-      client.user?.id ||
-      ''
-    const performerRef = rawUserRef.includes('/')
-      ? rawUserRef
-      : client.user?.resourceType && rawUserRef
-        ? `${client.user.resourceType}/${rawUserRef}`
-        : `Patient/${patientId}`
-
     const observation = {
       resourceType: 'Observation',
-      meta: {
-        profile: [TWCORE_OBS_PROFILE],
-      },
       status: 'final',
-      category: [
-        {
-          coding: [
-            {
-              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
-              code: 'survey',
-              display: 'Survey',
-            },
-          ],
-          text: 'Survey',
-        },
-      ],
-      text: {
-        status: 'generated',
-        div: `<div xmlns="http://www.w3.org/1999/xhtml">SEA Index: ${value}</div>`,
-      },
       code: {
         coding: [
           {
-            system: 'http://loinc.org',
-            code: SEA_LOINC_PRIMARY_CODE,
-            display: SEA_LOINC_PRIMARY_DISPLAY,
-          },
-          {
-            system: 'http://loinc.org',
-            code: SEA_LOINC_SECONDARY_CODE,
-            display: SEA_LOINC_SECONDARY_DISPLAY,
-          },
-          {
             system: 'http://clinical-indices.org',
             code: 'SEA-INDEX',
-            display: SEA_CODE_TEXT,
+            display: 'Subclinical Epileptiform Activity Index',
           },
         ],
-        text: SEA_CODE_TEXT,
       },
       subject: { reference: `Patient/${patientId}` },
-      performer: [{ reference: performerRef }],
       effectiveDateTime: new Date().toISOString(),
-      valueQuantity: {
-        value,
-        unit: 'index',
-        system: 'http://unitsofmeasure.org',
-        code: '1',
-      },
+      valueQuantity: { value, unit: 'index' },
     }
 
-    const serverUrl = client.state?.serverUrl
-    const accessToken = client.state?.tokenResponse?.access_token
-    if (!serverUrl || !accessToken) {
-      throw new Error('FHIR 授權資訊缺失')
-    }
-
-    setLastObservation(observation)
-    const res = await fetch(`${serverUrl}/Observation`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/fhir+json',
-        Accept: 'application/fhir+json',
-      },
-      body: JSON.stringify(observation),
-    })
-
-    if (!res.ok) {
-      let outcome = null
-      try {
-        outcome = await res.json()
-      } catch {
-        outcome = null
-      }
-      const error = new Error('FHIR write failed')
-      error.status = res.status
-      error.response = outcome
-      throw error
-    }
+    await client.create(observation)
   }
-
-  const handleDownloadObservation = useCallback(() => {
-    if (!lastObservation) return
-    const blob = new Blob([JSON.stringify(lastObservation, null, 2)], {
-      type: 'application/fhir+json',
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'sea-index-observation.json'
-    link.click()
-    URL.revokeObjectURL(url)
-  }, [lastObservation])
 
   const handleUpload = useCallback(async () => {
     if (!file) {
@@ -759,14 +663,7 @@ function App() {
 
                 <div className="mt-auto flex items-center justify-between pt-6 text-[11px] text-slate-400">
                   <span>SMART on FHIR Ready</span>
-                  <a
-                    href={`${import.meta.env.BASE_URL}privacy.html`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="transition hover:text-slate-200"
-                  >
-                    隱私權政策 · 法律聲明
-                  </a>
+                  <span>Privacy · Legal</span>
                 </div>
               </div>
             </div>
@@ -784,6 +681,9 @@ function App() {
             <h1 className="text-2xl font-semibold text-slate-100">
               EEG Analysis Dashboard
             </h1>
+            <p className="mt-1 text-sm text-slate-400">
+              SMART on FHIR + SEA Index 分析
+            </p>
           </div>
           <button
             type="button"
@@ -796,6 +696,14 @@ function App() {
 
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div
+            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs ${
+              authError ? 'bg-slate-800 text-slate-400' : 'bg-sky-900/40 text-sky-200'
+            }`}
+          >
+            <ShieldCheck className={`h-4 w-4 ${authError ? 'text-slate-500' : 'text-sky-300'}`} />
+            SMART 安全
+          </div>
           <div className="flex items-center gap-2 rounded-full bg-emerald-900/40 px-3 py-1 text-xs text-emerald-200">
             SEA 已連線
           </div>
@@ -891,21 +799,7 @@ function App() {
           </aside>
 
           <div className="space-y-6 h-full">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
-              <div className="flex items-center gap-2 text-slate-200">
-                <UserRound className="h-4 w-4 text-sky-400" />
-                <span className="text-sm font-semibold">病患資訊</span>
-              </div>
-              <div className="mt-4 divide-y divide-slate-800 text-sm">
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-slate-400">Patient ID</span>
-                  <span className="font-medium text-slate-100">
-                    {patientInfo?.id || patientId || '-'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <div className="h-full rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-slate-200">
@@ -913,6 +807,9 @@ function App() {
                     <span className="text-sm font-semibold">檔案資訊</span>
                   </div>
                 </div>
+                <span className="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300">
+                  FHIR R4
+                </span>
               </div>
 
               <div className="mt-4 divide-y divide-slate-800 text-sm">
@@ -970,7 +867,7 @@ function App() {
           </div>
         </section>
 
-        <div className="mt-6 pb-6 space-y-4">
+        <div className="mt-4 pb-4 space-y-4">
           {renderStatusCard()}
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
             <div className="flex items-center justify-between">
@@ -978,26 +875,16 @@ function App() {
                 <Radar className="h-4 w-4 text-sky-400" />
                 <span className="text-sm font-semibold">SEA Index</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div
-                  className={`text-lg font-semibold ${
-                    Number.isFinite(seaIndex) && seaIndex >= 9
-                      ? 'text-red-500'
-                      : Number.isFinite(seaIndex) && seaIndex >= 5
-                        ? 'text-yellow-500'
-                        : 'text-emerald-600'
-                  }`}
-                >
-                  {seaIndex !== null && Number.isFinite(seaIndex) ? Math.round(seaIndex) : '-'}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadObservation}
-                  disabled={!lastObservation}
-                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
-                >
-                  下載 Observation
-                </button>
+              <div
+                className={`text-lg font-semibold ${
+                  Number.isFinite(seaIndex) && seaIndex >= 9
+                    ? 'text-red-500'
+                    : Number.isFinite(seaIndex) && seaIndex >= 5
+                      ? 'text-yellow-500'
+                      : 'text-emerald-600'
+                }`}
+              >
+                {seaIndex !== null && Number.isFinite(seaIndex) ? Math.round(seaIndex) : '-'}
               </div>
             </div>
             <div className="mt-4">

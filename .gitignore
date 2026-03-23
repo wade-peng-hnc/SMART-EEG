@@ -11,10 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
-
-# Sensitive EEG data files
-*.gz
-*.csv
+.env
+.env.*
+!.env.smart-proxy.example
 
 # Editor directories and files
 .vscode/*
